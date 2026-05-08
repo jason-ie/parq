@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Sliders } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 import PropTypes from "prop-types";
 
 const SearchBar = ({ onSearch }) => {
@@ -9,40 +9,22 @@ const SearchBar = ({ onSearch }) => {
 	const [filters, setFilters] = useState({
 		maxPrice: Infinity,
 		parkingType: "all",
-		radius: 5, // Default to 5 miles
+		radius: 5,
 	});
 
 	const autocompleteRef = useRef(null);
 	const inputRef = useRef(null);
 
 	useEffect(() => {
-		if (!window.google) return;
-		if (!inputRef.current) return;
+		if (!window.google || !inputRef.current) return;
 
 		autocompleteRef.current = new window.google.maps.places.Autocomplete(
 			inputRef.current,
-			{
-				types: ["establishment", "geocode"],
-				componentRestrictions: { country: "us" },
-			}
+			{ types: ["establishment", "geocode"], componentRestrictions: { country: "us" } }
 		);
 
 		autocompleteRef.current.addListener("place_changed", handlePlaceSelect);
 	}, []);
-
-	// const initAutocomplete = () => {
-	// 	if (!inputRef.current) return;
-
-	// 	autocompleteRef.current = new window.google.maps.places.Autocomplete(
-	// 		inputRef.current,
-	// 		{
-	// 			types: ["establishment", "geocode"],
-	// 			componentRestrictions: { country: "us" },
-	// 		}
-	// 	);
-
-	// 	autocompleteRef.current.addListener("place_changed", handlePlaceSelect);
-	// };
 
 	const handlePlaceSelect = () => {
 		const place = autocompleteRef.current.getPlace();
@@ -60,7 +42,7 @@ const SearchBar = ({ onSearch }) => {
 	};
 
 	const handleFilterChange = (newFilters) => {
-		setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
+		setFilters((prev) => ({ ...prev, ...newFilters }));
 	};
 
 	const handleSubmit = (e) => {
@@ -69,70 +51,63 @@ const SearchBar = ({ onSearch }) => {
 			alert("Please select a location from the autocomplete suggestions");
 			return;
 		}
-
-		onSearch({
-			query: searchQuery,
-			place: selectedPlace,
-			filters,
-		});
+		onSearch({ query: searchQuery, place: selectedPlace, filters });
 	};
 
 	return (
-		<div className="relative max-w-4xl mx-auto px-4">
+		<div className="relative">
 			<form onSubmit={handleSubmit}>
-				<div className="flex items-center space-x-2">
-					{/* Search Input */}
-					<div className="flex-1">
-						<div className="flex items-center bg-white rounded-full shadow-md border border-gray-200">
-							<MapPin className="h-5 w-5 text-gray-400 ml-4" />
-							<input
-								ref={inputRef}
-								type="text"
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								placeholder="Search for venues or addresses..."
-								className="w-full px-4 py-3 rounded-full focus:outline-none"
-							/>
-						</div>
+				<div className="flex items-center gap-2">
+					{/* Input */}
+					<div className="flex-1 flex items-center bg-white border border-gray-200 rounded-xl px-4 h-12 gap-3 focus-within:border-gray-400 focus-within:ring-1 focus-within:ring-gray-200 transition-all duration-150">
+						<MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+						<input
+							ref={inputRef}
+							type="text"
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							placeholder="Search venues or addresses..."
+							className="flex-1 text-sm text-gray-900 placeholder-gray-400 bg-transparent focus:outline-none"
+						/>
 					</div>
 
-					{/* Filter Toggle */}
+					{/* Filter toggle */}
 					<button
 						type="button"
 						onClick={() => setShowFilters(!showFilters)}
-						className="p-3 bg-white rounded-full shadow-md border border-gray-200 hover:bg-gray-50"
+						className={`h-12 w-12 flex items-center justify-center rounded-xl border transition-all duration-150 cursor-pointer flex-shrink-0 ${
+							showFilters
+								? "bg-gray-900 border-gray-900 text-white"
+								: "bg-white border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-800"
+						}`}
 					>
-						<Sliders className="h-5 w-5 text-gray-600" />
+						<SlidersHorizontal className="h-4 w-4" />
 					</button>
 
-					{/* Search Button */}
+					{/* Search button */}
 					<button
 						type="submit"
-						className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors flex items-center"
+						className="h-12 flex items-center gap-2 px-5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors duration-150 cursor-pointer flex-shrink-0"
 					>
-						<Search className="h-5 w-5" />
-						<span className="ml-2 hidden sm:inline">Search</span>
+						<Search className="h-4 w-4" />
+						<span className="hidden sm:block">Search</span>
 					</button>
 				</div>
 
-				{/* Filters */}
+				{/* Filter panel */}
 				{showFilters && (
-					<div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							{/* Distance Filter - Now Required */}
+					<div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-xl shadow-lg border border-gray-200 p-5 z-50">
+						<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Filters</p>
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Search Radius <span className="text-red-500">*</span>
+								<label className="block text-xs font-medium text-gray-700 mb-1.5">
+									Search Radius <span className="text-red-400">*</span>
 								</label>
 								<select
 									value={filters.radius}
-									onChange={(e) =>
-										handleFilterChange({
-											radius: Number(e.target.value),
-										})
-									}
-									className="block w-full rounded-md border border-gray-300 py-2 px-3"
+									onChange={(e) => handleFilterChange({ radius: Number(e.target.value) })}
 									required
+									className="w-full text-sm rounded-lg border border-gray-200 py-2.5 px-3 bg-white focus:outline-none focus:border-gray-400"
 								>
 									<option value="1">Within 1 mile</option>
 									<option value="5">Within 5 miles</option>
@@ -140,43 +115,32 @@ const SearchBar = ({ onSearch }) => {
 								</select>
 							</div>
 
-							{/* Price Filter */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Max Price
-								</label>
+								<label className="block text-xs font-medium text-gray-700 mb-1.5">Max Price</label>
 								<select
 									value={filters.maxPrice}
 									onChange={(e) =>
 										handleFilterChange({
-											maxPrice:
-												e.target.value === "any"
-													? Infinity
-													: Number(e.target.value),
+											maxPrice: e.target.value === "any" ? Infinity : Number(e.target.value),
 										})
 									}
-									className="block w-full rounded-md border border-gray-300 py-2 px-3"
+									className="w-full text-sm rounded-lg border border-gray-200 py-2.5 px-3 bg-white focus:outline-none focus:border-gray-400"
 								>
-									<option value="any">Any Price</option>
+									<option value="any">Any price</option>
 									<option value="10">Up to $10/hr</option>
 									<option value="25">Up to $25/hr</option>
 									<option value="50">Up to $50/hr</option>
 								</select>
 							</div>
 
-							{/* Type Filter */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Parking Type
-								</label>
+								<label className="block text-xs font-medium text-gray-700 mb-1.5">Parking Type</label>
 								<select
 									value={filters.parkingType}
-									onChange={(e) =>
-										handleFilterChange({ parkingType: e.target.value })
-									}
-									className="block w-full rounded-md border border-gray-300 py-2 px-3"
+									onChange={(e) => handleFilterChange({ parkingType: e.target.value })}
+									className="w-full text-sm rounded-lg border border-gray-200 py-2.5 px-3 bg-white focus:outline-none focus:border-gray-400"
 								>
-									<option value="all">All Types</option>
+									<option value="all">All types</option>
 									<option value="Driveway">Driveway</option>
 									<option value="Garage">Garage</option>
 									<option value="Street">Street</option>

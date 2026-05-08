@@ -7,72 +7,59 @@ const SpotCard = ({ spot, onSelect }) => {
 
 	return (
 		<div
-			className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+			className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
 			onClick={() => onSelect(spot)}
 		>
-			{/* Map Preview Section */}
-			<div className="relative h-48">
+			{/* Map Preview */}
+			<div className="relative h-44 overflow-hidden bg-gray-100">
 				<img
-					src={`https://maps.googleapis.com/maps/api/staticmap?center=${
-						spot.location.coordinates.lat
-					},${
-						spot.location.coordinates.lng
-					}&zoom=15&size=400x200&markers=color:red%7C${
-						spot.location.coordinates.lat
-					},${spot.location.coordinates.lng}&key=${
-						import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-					}`}
-					alt={`Map preview of ${spot.location.address}`}
-					className="w-full h-full object-cover"
+					src={`https://maps.googleapis.com/maps/api/staticmap?center=${spot.location.coordinates.lat},${spot.location.coordinates.lng}&zoom=15&size=400x200&markers=color:0x111827%7C${spot.location.coordinates.lat},${spot.location.coordinates.lng}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`}
+					alt={`Map of ${spot.location.address}`}
+					className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
 				/>
+
+				{/* Favorite */}
 				<button
 					onClick={(e) => {
 						e.stopPropagation();
 						setIsFavorite(!isFavorite);
 					}}
-					className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors duration-200"
+					className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 hover:bg-white shadow-sm transition-colors duration-150 cursor-pointer"
 				>
 					<Heart
-						className={`w-5 h-5 ${
-							isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
+						className={`w-4 h-4 transition-colors ${
+							isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"
 						}`}
 					/>
 				</button>
-			</div>
 
-			{/* Content Section */}
-			<div className="p-4">
-				{/* Location and Type */}
-				<div className="flex justify-between items-start mb-2">
-					<div>
-						<h3 className="font-semibold text-lg">{spot.location.address}</h3>
-						<div className="flex items-center text-sm text-gray-600 mt-1">
-							<MapPin className="w-4 h-4 mr-1" />
-							<span>
-								{spot.location.city}, {spot.location.state}
-							</span>
-						</div>
-					</div>
-					<div className="flex items-center bg-gray-100 px-2 py-1 rounded">
-						<span className="text-sm">{spot.type}</span>
-					</div>
-				</div>
-
-				{/* Availability */}
-				<div className="flex items-center text-sm text-gray-600 mb-2">
-					<Clock className="w-4 h-4 mr-2" />
-					<span>
-						{spot.availability.start} - {spot.availability.end}
+				{/* Type badge */}
+				<div className="absolute bottom-3 left-3">
+					<span className="bg-white/90 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">
+						{spot.type}
 					</span>
 				</div>
+			</div>
 
-				{/* Price */}
-				<div className="flex justify-between items-center mt-4">
-					<div className="flex items-center">
-						<span className="font-semibold text-lg">
-							${spot.price.toFixed(2)}
-						</span>
-						<span className="text-sm text-gray-600">/hour</span>
+			{/* Content */}
+			<div className="p-4">
+				<h3 className="font-semibold text-gray-900 text-sm leading-tight truncate">
+					{spot.location.address}
+				</h3>
+				<div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+					<MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+					<span className="truncate">{spot.location.city}, {spot.location.state}</span>
+				</div>
+
+				<div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
+					<Clock className="w-3.5 h-3.5 flex-shrink-0" />
+					<span>{spot.availability.start} – {spot.availability.end}</span>
+				</div>
+
+				<div className="flex items-center justify-between mt-4">
+					<div>
+						<span className="text-lg font-bold text-gray-900">${spot.price.toFixed(2)}</span>
+						<span className="text-xs text-gray-400 ml-1">/hr</span>
 					</div>
 
 					<button
@@ -80,7 +67,7 @@ const SpotCard = ({ spot, onSelect }) => {
 							e.stopPropagation();
 							onSelect(spot);
 						}}
-						className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+						className="bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-150 cursor-pointer"
 					>
 						Book Now
 					</button>

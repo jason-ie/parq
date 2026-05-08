@@ -7,16 +7,26 @@ import MapView from "./MapView";
 import { MOCK_SPOTS, calculateDistance } from "../utils/mockSpots";
 import BookingModal from "./spots/BookingModal";
 import BookingSuccessModal from "./spots/BookingSuccessModal";
+import { useAuth } from "../contexts/AuthContext";
+
+const getGreeting = () => {
+	const h = new Date().getHours();
+	if (h < 12) return "Good morning";
+	if (h < 17) return "Good afternoon";
+	return "Good evening";
+};
 
 export default function RenterDashboard() {
 	const [showMap, setShowMap] = useState(false);
-	const [showFilters, setShowFilters] = useState(false);
 	const [visibleSpots, setVisibleSpots] = useState(MOCK_SPOTS);
 	const [selectedSpot, setSelectedSpot] = useState(null);
 	const [showBookingModal, setShowBookingModal] = useState(false);
 	const [mapCenter, setMapCenter] = useState(null);
 	const [showSuccessModal, setShowSuccessModal] = useState(false);
 	const [confirmedBooking, setConfirmedBooking] = useState(null);
+
+	const { userData } = useAuth();
+	const firstName = userData?.name?.split(" ")[0] || "there";
 
 	const handleBookingSuccess = (booking) => {
 		setShowBookingModal(false);
@@ -35,106 +45,98 @@ export default function RenterDashboard() {
 	};
 
 	const handleSearch = ({ place, filters }) => {
-		let filteredSpots = MOCK_SPOTS;
+		let filtered = MOCK_SPOTS;
 
 		if (place) {
 			setMapCenter(place.coordinates);
-
-			filteredSpots = filteredSpots.filter((spot) => {
-				const distance = calculateDistance(
-					place.coordinates.lat,
-					place.coordinates.lng,
-					spot.location.coordinates.lat,
-					spot.location.coordinates.lng
+			filtered = filtered.filter((spot) => {
+				const dist = calculateDistance(
+					place.coordinates.lat, place.coordinates.lng,
+					spot.location.coordinates.lat, spot.location.coordinates.lng
 				);
-
-				const matchesDistance = distance <= filters.radius;
-				const matchesPrice = spot.price <= filters.maxPrice;
-				const matchesType =
-					filters.parkingType === "all" || spot.type === filters.parkingType;
-
-				return matchesDistance && matchesPrice && matchesType;
+				return (
+					dist <= filters.radius &&
+					spot.price <= filters.maxPrice &&
+					(filters.parkingType === "all" || spot.type === filters.parkingType)
+				);
 			});
 		} else {
 			setMapCenter(null);
-
-			filteredSpots = filteredSpots.filter((spot) => {
-				const matchesPrice = spot.price <= filters.maxPrice;
-				const matchesType =
-					filters.parkingType === "all" || spot.type === filters.parkingType;
-
-				return matchesPrice && matchesType;
-			});
+			filtered = filtered.filter(
+				(s) =>
+					s.price <= filters.maxPrice &&
+					(filters.parkingType === "all" || s.type === filters.parkingType)
+			);
 		}
 
-		setVisibleSpots(filteredSpots);
+		setVisibleSpots(filtered);
 	};
 
 	return (
-		<div className="min-h-screen bg-white">
-			{/* Navigation */}
+		<div className="min-h-screen bg-gray-50">
 			<NavTabs />
 
-			{/* Search Section */}
-			<div className="bg-white py-4 sticky top-0 z-10 border-b">
-				<SearchBar
-					onSearch={handleSearch}
-					onFilterToggle={() => setShowFilters(!showFilters)}
-				/>
+			{/* Hero search section */}
+			<div className="bg-white border-b border-gray-200">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+					<p className="text-sm text-gray-400 font-medium mb-1 tracking-wide uppercase">
+						{getGreeting()}, {firstName}
+					</p>
+					<h1 className="text-2xl font-bold text-gray-900 mb-5">
+						Find parking near you
+					</h1>
+					<SearchBar onSearch={handleSearch} />
+				</div>
 			</div>
 
-			{/* Main Content */}
-			<main className="max-w-7xl mx-auto px-4 py-6">
+			{/* Content */}
+			<main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-20">
 				{!showMap ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-						{visibleSpots.map((spot) => (
-							<SpotCard key={spot.id} spot={spot} onSelect={handleSpotSelect} />
-						))}
-					</div>
+					visibleSpots.length > 0 ? (
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+							{visibleSpots.map((spot) => (
+								<SpotCard key={spot.id} spot={spot} onSelect={handleSpotSelect} />
+							))}
+						</div>
+					) : (
+						<div className="flex flex-col items-center justify-center py-24 text-center">
+							<div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+								<MapPin className="h-5 w-5 text-gray-400" />
+							</div>
+							<p className="text-sm font-semibold text-gray-900 mb-1">No spots found</p>
+							<p className="text-sm text-gray-400">Try adjusting your search or filters.</p>
+						</div>
+					)
 				) : (
-					<div className="h-[calc(100vh-64px)] bg-gray-100 rounded-lg">
-						{showMap && (
-							<MapView
-								spots={visibleSpots}
-								onBookNow={handleBookNow}
-								center={mapCenter}
-							/>
-						)}
+					<div className="h-[calc(100vh-220px)] rounded-xl overflow-hidden bg-gray-100">
+						<MapView spots={visibleSpots} onBookNow={handleBookNow} center={mapCenter} />
 					</div>
 				)}
 			</main>
 
-			{/* Show Map Toggle Button */}
-			<div className="fixed bottom-6 left-1/2 transform -translate-x-1/2">
+			{/* Map / List toggle */}
+			<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
 				<button
 					onClick={() => setShowMap(!showMap)}
-					className="bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-all flex items-center space-x-2"
+					className="bg-gray-900 text-white px-5 py-2.5 rounded-full shadow-lg hover:bg-gray-700 transition-colors duration-150 flex items-center gap-2 text-sm font-semibold cursor-pointer"
 				>
-					<MapPin className="h-5 w-5" />
-					<span>{showMap ? "Show list" : "Show map"}</span>
+					<MapPin className="h-4 w-4" />
+					{showMap ? "Show list" : "Show map"}
 				</button>
 			</div>
 
-			{/* Booking Modal */}
 			{showBookingModal && selectedSpot && (
 				<BookingModal
 					spot={selectedSpot}
-					onClose={() => {
-						setShowBookingModal(false);
-						setSelectedSpot(null);
-					}}
+					onClose={() => { setShowBookingModal(false); setSelectedSpot(null); }}
 					onSuccess={handleBookingSuccess}
 				/>
 			)}
 
-			{/* Success Modal */}
 			{showSuccessModal && confirmedBooking && (
 				<BookingSuccessModal
 					booking={confirmedBooking}
-					onClose={() => {
-						setShowSuccessModal(false);
-						setConfirmedBooking(null);
-					}}
+					onClose={() => { setShowSuccessModal(false); setConfirmedBooking(null); }}
 				/>
 			)}
 		</div>

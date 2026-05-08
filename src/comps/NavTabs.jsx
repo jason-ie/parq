@@ -1,18 +1,15 @@
 import { useState } from 'react';
-import { Home, Car, Bell, User, Calendar } from 'lucide-react';
+import { Home, Car, Bell, User, Calendar, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../config/firebase';
-import UserTitle from './UserTitle/UserTitle.jsx';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const NavTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userData } = useAuth();
-  const userId = user?.uid;
   const isOwner = userData?.role === 'owner';
 
-  // Set active tab based on current path
   const getActiveTab = (path) => {
     if (path === '/dashboard') return 'home';
     if (path === '/dashboard/bookings') return 'bookings';
@@ -24,39 +21,18 @@ const NavTabs = () => {
 
   const [activeTab, setActiveTab] = useState(getActiveTab(location.pathname));
 
-  // Define tabs based on user role
   const ownerTabs = [
     { id: 'home', name: 'My Spots', icon: Home, path: '/dashboard' },
-    {
-      id: 'bookings',
-      name: 'Spot Bookings',
-      icon: Car,
-      path: '/dashboard/bookings',
-    },
-    {
-      id: 'notifications',
-      name: 'Notifications',
-      icon: Bell,
-      path: '/dashboard/notifications',
-    },
+    { id: 'bookings', name: 'Bookings', icon: Car, path: '/dashboard/bookings' },
+    { id: 'notifications', name: 'Notifications', icon: Bell, path: '/dashboard/notifications' },
     { id: 'profile', name: 'Profile', icon: User, path: '/dashboard/profile' },
   ];
 
   const renterTabs = [
     { id: 'home', name: 'Find Spots', icon: Home, path: '/dashboard' },
     { id: 'events', name: 'Events', icon: Calendar, path: '/dashboard/events' },
-    {
-      id: 'bookings',
-      name: 'My Bookings',
-      icon: Car,
-      path: '/dashboard/bookings',
-    },
-    {
-      id: 'notifications',
-      name: 'Notifications',
-      icon: Bell,
-      path: '/dashboard/notifications',
-    },
+    { id: 'bookings', name: 'My Bookings', icon: Car, path: '/dashboard/bookings' },
+    { id: 'notifications', name: 'Notifications', icon: Bell, path: '/dashboard/notifications' },
     { id: 'profile', name: 'Profile', icon: User, path: '/dashboard/profile' },
   ];
 
@@ -76,53 +52,78 @@ const NavTabs = () => {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const displayName = userData?.name || user?.email?.split('@')[0] || 'Guest';
+
   return (
-    <div className="bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center h-14 gap-8">
+
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-gray-900">parq</h1>
-          </div>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex-shrink-0 cursor-pointer group"
+          >
+            <span className="text-[22px] font-black text-gray-900 tracking-tighter leading-none group-hover:text-gray-600 transition-colors duration-150">
+              parq
+            </span>
+          </button>
 
-          {/* Navigation Tabs */}
-          <div className="flex-1 flex justify-center">
-            <div className="hidden sm:flex space-x-8">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabClick(tab)}
-                    className={`flex items-center space-x-2 px-3 py-4 text-sm font-medium border-b-2 ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{tab.name}</span>
-                  </button>
-                );
-              })}
+          {/* Nav tabs — scrollable on small screens */}
+          <nav className="flex flex-1 items-stretch gap-0 overflow-x-auto min-w-0 -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab)}
+                  className={`flex items-center gap-1.5 px-3 h-14 text-sm whitespace-nowrap border-b-2 transition-all duration-150 cursor-pointer flex-shrink-0 ${
+                    isActive
+                      ? 'border-gray-900 text-gray-900 font-semibold'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 font-medium'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span>{tab.name}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* User */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center">
+                <span className="text-white text-[11px] font-bold leading-none">
+                  {getInitials(userData?.name)}
+                </span>
+              </div>
+              <span className="hidden lg:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+                {displayName}
+              </span>
             </div>
-          </div>
 
-          {/* User Info and Logout */}
-          <div className="flex items-center space-x-4">
-            <UserTitle userId={userId} />
             {user && (
               <button
                 onClick={handleLogout}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                title="Log out"
+                className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors duration-150 cursor-pointer"
               >
-                Log Out
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:block text-sm font-medium">Log out</span>
               </button>
             )}
           </div>
+
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 

@@ -1,17 +1,93 @@
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { MOCK_SPOTS } from './mockSpots';
 
 /**
- * Checks if a parking spot is available for a given date and time slot
+ * Helper function to get a spot by ID from mock data
+ * @param {string} spotId - The ID of the spot to find
+ * @returns {Object|null} - The spot object or null if not found
+ */
+const getSpotById = (spotId) => {
+  return MOCK_SPOTS.find((spot) => spot.id === spotId) || null;
+};
+
+/**
+ * Gets all available dates for a spot
+ * @param {string} spotId - Spot ID from mock data
+ * @returns {Promise<Array>} - Array of available dates with details
+ */
+export const getAvailableDates = async (spotId) => {
+  try {
+    // Get the spot from mock data
+    const spotData = getSpotById(spotId);
+
+    if (!spotData) {
+      throw new Error('Spot not found');
+    }
+
+    // Map each date to an object with details
+    const availableDates = spotData.availability.availableDates.map(
+      (dateStr) => ({
+        date: dateStr,
+        hours: {
+          start: spotData.availability.start,
+          end: spotData.availability.end,
+        },
+        price: spotData.price,
+      })
+    );
+
+    return availableDates;
+  } catch (error) {
+    console.error('Error getting available dates:', error);
+    throw error;
+  }
+};
+
+/**
+ * Gets all available time slots for a spot on a specific date
+ * @param {string} spotId - Spot ID
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @returns {Promise<Array>} - Array of available time slots
+ */
+export const getAvailableTimeSlots = async (spotId, date) => {
+  try {
+    // Get the spot from mock data
+    const spotData = getSpotById(spotId);
+
+    if (!spotData) {
+      throw new Error('Spot not found');
+    }
+
+    // Check if the date is in the available dates array
+    if (!spotData.availability.availableDates.includes(date)) {
+      return [];
+    }
+
+    // Generate time slots based on start and end times
+    const [startHour] = spotData.availability.start.split(':').map(Number);
+    const [endHour] = spotData.availability.end.split(':').map(Number);
+
+    const timeSlots = [];
+    for (let hour = startHour; hour < endHour; hour++) {
+      timeSlots.push({
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        price: spotData.price,
+      });
+    }
+
+    return timeSlots;
+  } catch (error) {
+    console.error('Error getting available time slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * Checks if a parking spot is available for the specified date and time
+ * @param {string} spotId - Spot ID
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {string} startTime - Start time in HH:MM format
+ * @param {number} duration - Duration in hours
+ * @returns {Promise<Object>} - Availability result
  */
 export const checkSpotAvailability = async (
   spotId,
@@ -20,78 +96,38 @@ export const checkSpotAvailability = async (
   duration
 ) => {
   try {
-    // Get the spot details
-    const spotDoc = await getDoc(doc(db, 'spots', spotId));
-    if (!spotDoc.exists()) {
+    // Get the spot from mock data
+    const spotData = getSpotById(spotId);
+
+    if (!spotData) {
       return { isAvailable: false, error: 'Spot not found' };
     }
 
-    const spot = spotDoc.data();
-    const requestDate = new Date(date);
-    const dayName = requestDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-    });
-
-    // Check if this day is allowed
-    if (
-      !spot.availability.days.includes(dayName) &&
-      !spot.availability.days.includes('Everyday')
-    ) {
+    // Check if the date is in available dates
+    if (!spotData.availability.availableDates.includes(date)) {
       return {
         isAvailable: false,
-        error: `Spot is not available on ${dayName}s`,
+        error: 'This date is not available for booking',
       };
     }
 
-    // Check if within valid dates
-    const validFrom = new Date(spot.availability.validFrom);
-    const validUntil = new Date(spot.availability.validUntil);
-    if (requestDate < validFrom || requestDate > validUntil) {
-      return {
-        isAvailable: false,
-        error: 'Date is outside the valid booking period',
-      };
-    }
-
-    // Check if time is within operating hours
+    // Check if time is within available hours
     const [requestHour] = startTime.split(':').map(Number);
-    const [spotStart] = spot.availability.start.split(':').map(Number);
-    const [spotEnd] = spot.availability.end.split(':').map(Number);
+    const [availStart] = spotData.availability.start.split(':').map(Number);
+    const [availEnd] = spotData.availability.end.split(':').map(Number);
 
-    if (requestHour < spotStart || requestHour + duration > spotEnd) {
+    if (requestHour < availStart || requestHour + duration > availEnd) {
       return {
         isAvailable: false,
-        error: 'Time is outside operating hours',
+        error: `Time is outside available hours (${spotData.availability.start}-${spotData.availability.end})`,
       };
     }
 
-    // Check for existing bookings
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('spotId', '==', spotId),
-      where('date', '==', date),
-      where('status', '==', 'confirmed')
-    );
-
-    const bookings = await getDocs(bookingsQuery);
-
-    for (const doc of bookings.docs) {
-      const booking = doc.data();
-      const [bookingStart] = booking.startTime.split(':').map(Number);
-      const [bookingEnd] = booking.endTime.split(':').map(Number);
-
-      // Check for overlap
-      if (
-        !(requestHour + duration <= bookingStart || requestHour >= bookingEnd)
-      ) {
-        return {
-          isAvailable: false,
-          error: 'Time slot already booked',
-        };
-      }
-    }
-
-    return { isAvailable: true };
+    // For mock data, assume it's available if it passes all checks
+    return {
+      isAvailable: true,
+      price: spotData.price,
+    };
   } catch (error) {
     console.error('Error checking availability:', error);
     return {
@@ -102,91 +138,15 @@ export const checkSpotAvailability = async (
 };
 
 /**
- * Gets all available time slots for a spot on a specific date
- */
-export const getAvailableTimeSlots = async (spotId, date) => {
-  try {
-    // Get spot details
-    const spotDoc = await getDoc(doc(db, 'spots', spotId));
-    if (!spotDoc.exists()) {
-      throw new Error('Spot not found');
-    }
-
-    const spot = spotDoc.data();
-    const [startHour] = spot.availability.start.split(':').map(Number);
-    const [endHour] = spot.availability.end.split(':').map(Number);
-
-    // Get existing bookings
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('spotId', '==', spotId),
-      where('date', '==', date),
-      where('status', '==', 'confirmed')
-    );
-
-    const bookings = await getDocs(bookingsQuery);
-    const bookedHours = new Set();
-
-    // Mark booked hours
-    bookings.forEach((doc) => {
-      const booking = doc.data();
-      const [start] = booking.startTime.split(':').map(Number);
-      const [end] = booking.endTime.split(':').map(Number);
-
-      for (let hour = start; hour < end; hour++) {
-        bookedHours.add(hour);
-      }
-    });
-
-    // Generate available slots
-    const availableSlots = [];
-    for (let hour = startHour; hour < endHour; hour++) {
-      if (!bookedHours.has(hour)) {
-        availableSlots.push(`${hour.toString().padStart(2, '0')}:00`);
-      }
-    }
-
-    return availableSlots;
-  } catch (error) {
-    console.error('Error getting available time slots:', error);
-    throw error;
-  }
-};
-
-/**
- * Updates spot availability after a booking is confirmed
+ * Update spot availability after a booking is confirmed
+ * (Mock implementation - doesn't actually do anything)
+ * @param {string} spotId - Spot ID
+ * @param {Object} bookingDetails - Booking details object
+ * @returns {Promise<void>}
  */
 export const updateSpotAvailability = async (spotId, bookingDetails) => {
-  try {
-    const { date, startTime, endTime } = bookingDetails;
-
-    // Get the hours that need to be blocked
-    const [start] = startTime.split(':').map(Number);
-    const [end] = endTime.split(':').map(Number);
-
-    // Create/update the availability document
-    const availabilityRef = doc(db, 'spotAvailability', `${spotId}_${date}`);
-    const availabilityDoc = await getDoc(availabilityRef);
-
-    const timeSlots = {};
-    for (let hour = start; hour < end; hour++) {
-      timeSlots[`${hour.toString().padStart(2, '0')}:00`] = {
-        isAvailable: false,
-        bookingId: bookingDetails.id,
-      };
-    }
-
-    if (!availabilityDoc.exists()) {
-      await setDoc(availabilityRef, {
-        spotId,
-        date,
-        timeSlots,
-      });
-    } else {
-      await updateDoc(availabilityRef, { timeSlots });
-    }
-  } catch (error) {
-    console.error('Error updating spot availability:', error);
-    throw error;
-  }
+  // In a real app, this would update the database
+  // For the mock version, we'll just log the booking
+  console.log(`Mock booking created for spot ${spotId}:`, bookingDetails);
+  return;
 };
