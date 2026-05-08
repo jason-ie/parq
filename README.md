@@ -1,8 +1,30 @@
-# React + Vite
+# parq
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A peer-to-peer parking marketplace that connects drivers with private parking spot owners near events and venues.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Renter** — Search parking spots by location, filter by price/type/radius, view on map or list, and book spots
+- **Owner** — List and manage parking spots with availability windows
+- **Event Discovery** — Browse nearby events via Ticketmaster API to find parking in advance
+- **Authentication** — Email/password auth with role-based dashboards (renter vs. owner)
+- **Bookings** — Real-time availability checks and booking confirmation via Firestore
+
+## Tech Stack
+
+- **Frontend:** React, Tailwind CSS
+- **Backend/DB:** Firebase Auth, Firestore
+- **Maps:** Google Maps API (interactive map, static previews, Places autocomplete)
+- **Events:** Ticketmaster Discovery API
+
+## Status
+
+Core booking flow, auth, and dashboards are functional. Favorites and Notifications pages are placeholders. Event-to-spot linking is partially scaffolded.
+
+## Setup
+
+1. Clone the repo
+2. Create a `.env` file with:
+VITE_GOOGLE_MAPS_API_KEY=your_key
+3. Add your Firebase config to `src/config/firebase.js`
+4. `npm install && npm run dev`
